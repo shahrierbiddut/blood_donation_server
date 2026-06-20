@@ -1,0 +1,293 @@
+// controllers/authController.js
+const User = require("../models/User");
+const { generateTokensPair } = require("../config/jwt");
+const { sendSuccess, sendError } = require("../utils/errorResponse");
+const { validateEmail, validatePassword, sanitizeInput } = require("../utils/validators");
+
+/**
+ * @route   POST /api/auth/register
+ * @desc    Register a new user
+ * @access  Public
+ */
+exports.register = async (req, res) => {
+  try {
+    const { name, email, password, confirmPassword, phone, bloodGroup, district, upazila, address } = req.body;
+
+    // Validation
+    if (!name || !email || !password || !bloodGroup || !district || !upazila) {
+      return sendError(res, 400, "Please provide all required fields");
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return sendError(res, 400, "Please provide a valid email");
+    }
+
+    // Validate password strength
+    if (!validatePassword(password)) {
+      return sendError(
+        res,
+        400,
+        "Password must be at least 8 characters with uppercase, lowercase, number, and special character"
+      );
+    }
+
+    // Confirm password match
+    if (password !== confirmPassword) {
+      return sendError(res, 400, "Passwords do not match");
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return sendError(res, 400, "Email already registered");
+    }
+
+    // Create new user
+    const newUser = new User({
+      name: sanitizeInput(name),
+      email: email.toLowerCase(),
+      password: password,
+      phone: phone || null,
+      bloodGroup,
+      district: sanitizeInput(district),
+      upazila: sanitizeInput(upazila),
+      address: address ? sanitizeInput(address) : null,
+      role: "donor",
+      status: "active",
+      isDonor: true
+    });
+
+    // Save user to database
+    await newUser.save();
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokensPair(newUser._id, newUser.role);
+
+    // Response
+    res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      user: {
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        bloodGroup: newUser.bloodGroup,
+        role: newUser.role
+      },
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error during registration"
+    });
+  }
+};
+
+/**
+ * @route   POST /api/auth/login
+ * @desc    Login user
+ * @access  Public
+ */
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return sendError(res, 400, "Please provide email and password");
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      return sendError(res, 400, "Please provide a valid email");
+    }
+
+    // Find user and include password field
+    const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+
+    if (!user) {
+      return sendError(res, 401, "Invalid email or password");
+    }
+
+    // Check if user is blocked
+    if (user.status === "blocked") {
+      return sendError(res, 403, "Your account has been blocked. Contact administrator.");
+    }
+
+    // Compare passwords
+    const isPasswordCorrect = await user.comparePassword(password);
+
+    if (!isPasswordCorrect) {
+      return sendError(res, 401, "Invalid email or password");
+    }
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokensPair(user._id, user.role);
+
+    // Response
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        bloodGroup: user.bloodGroup,
+        role: user.role,
+        status: user.status
+      },
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error during login"
+    });
+  }
+};
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user
+ * @access  Private
+ */
+exports.logout = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: "Logout successful"
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error during logout"
+    });
+  }
+};
+
+/**
+ * @route   GET /api/auth/verify
+ * @desc    Verify JWT token and get current user
+ * @access  Private
+ */
+exports.verify = async (req, res) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, "Not authenticated");
+    }
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return sendError(res, 404, "User not found");
+    }
+
+    if (user.status === "blocked") {
+      return sendError(res, 403, "Your account has been blocked");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Token verified",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        bloodGroup: user.bloodGroup,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar
+      }
+    });
+  } catch (error) {
+    console.error("Verify error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error verifying token"
+    });
+  }
+};
+
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Refresh access token using refresh token
+ * @access  Public
+ */
+exports.refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return sendError(res, 400, "Refresh token is required");
+    }
+
+    const { verifyRefreshToken } = require("../config/jwt");
+    const { generateToken } = require("../config/jwt");
+
+    try {
+      const decoded = verifyRefreshToken(refreshToken);
+      const newAccessToken = generateToken(
+        { userId: decoded.userId, userRole: decoded.userRole },
+        process.env.JWT_EXPIRE
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Token refreshed",
+        token: newAccessToken
+      });
+    } catch (error) {
+      return sendError(res, 401, "Invalid refresh token");
+    }
+  } catch (error) {
+    console.error("Refresh error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error refreshing token"
+    });
+  }
+};
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Send reset password link (Phase 2 bonus)
+ * @access  Public
+ */
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return sendError(res, 400, "Please provide email");
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return sendError(res, 404, "No user found with that email");
+    }
+
+    // In production, generate token and send email
+    res.status(200).json({
+      success: true,
+      message: "Password reset link has been sent to your email (Feature in development)"
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error in forgot password"
+    });
+  }
+};

@@ -41,6 +41,11 @@ const UserSchema = new mongoose.Schema(
     },
 
     // Location Information
+    division: {
+      type: String,
+      required: [true, "Please provide division"],
+      trim: true
+    },
     district: {
       type: String,
       required: [true, "Please provide district"],
@@ -49,6 +54,11 @@ const UserSchema = new mongoose.Schema(
     upazila: {
       type: String,
       required: [true, "Please provide upazila"],
+      trim: true
+    },
+    union: {
+      type: String,
+      required: [true, "Please provide union"],
       trim: true
     },
     address: {
@@ -143,23 +153,19 @@ UserSchema.index({ email: 1 });
 UserSchema.index({ role: 1 });
 UserSchema.index({ status: 1 });
 UserSchema.index({ bloodGroup: 1 });
+UserSchema.index({ division: 1 });
 UserSchema.index({ district: 1 });
 UserSchema.index({ createdAt: -1 });
 
 // ==================== Middleware: Hash Password ====================
-UserSchema.pre("save", async function (next) {
+UserSchema.pre("save", async function () {
   // Only hash password if it's new or modified
   if (!this.isModified("password")) {
-    return next();
+    return;
   }
 
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // ==================== Methods ====================
@@ -191,8 +197,10 @@ UserSchema.methods.getPublicProfile = function () {
     name: this.name,
     avatar: this.avatar,
     bloodGroup: this.bloodGroup,
+    division: this.division,
     district: this.district,
     upazila: this.upazila,
+    union: this.union,
     role: this.role,
     totalDonations: this.totalDonations
   };

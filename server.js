@@ -37,8 +37,12 @@ app.use((req, res, next) => {
 });
 
 // ==================== API Routes ====================
-// Auth routes (Phase 2) ✅
+// Auth routes ✅
 app.use("/api/auth", require("./routes/auth"));
+// Location routes ✅
+app.use("/api/location", require("./routes/location"));
+// Donation request routes ✅
+app.use("/api/donations", require("./routes/donations"));
 
 // User routes (will be created in Phase 2)
 // app.use("/api/users", require("./routes/users"));

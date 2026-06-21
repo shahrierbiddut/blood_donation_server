@@ -2,7 +2,7 @@
 const User = require("../models/User");
 const { generateTokensPair } = require("../config/jwt");
 const { sendSuccess, sendError } = require("../utils/errorResponse");
-const { validateEmail, validatePassword, sanitizeInput } = require("../utils/validators");
+const { validateEmail, sanitizeInput } = require("../utils/validators");
 
 /**
  * @route   POST /api/auth/register
@@ -11,10 +11,23 @@ const { validateEmail, validatePassword, sanitizeInput } = require("../utils/val
  */
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, confirmPassword, phone, bloodGroup, district, upazila, address } = req.body;
+    const {
+      name,
+      email,
+      password,
+      confirmPassword,
+      phone,
+      bloodGroup,
+      division,
+      district,
+      upazila,
+      union,
+      address,
+      avatar
+    } = req.body;
 
     // Validation
-    if (!name || !email || !password || !bloodGroup || !district || !upazila) {
+    if (!name || !email || !password || !bloodGroup || !division || !district || !upazila || !union) {
       return sendError(res, 400, "Please provide all required fields");
     }
 
@@ -24,7 +37,10 @@ exports.register = async (req, res) => {
     }
 
     // Validate password strength
-    if (!validatePassword(password)) {
+    const passwordValue = String(password || "");
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+    if (!strongPasswordRegex.test(passwordValue)) {
       return sendError(
         res,
         400,
@@ -33,7 +49,7 @@ exports.register = async (req, res) => {
     }
 
     // Confirm password match
-    if (password !== confirmPassword) {
+    if (passwordValue !== String(confirmPassword || "")) {
       return sendError(res, 400, "Passwords do not match");
     }
 
@@ -47,12 +63,15 @@ exports.register = async (req, res) => {
     const newUser = new User({
       name: sanitizeInput(name),
       email: email.toLowerCase(),
-      password: password,
+      password: passwordValue,
       phone: phone || null,
       bloodGroup,
+      division: sanitizeInput(division),
       district: sanitizeInput(district),
       upazila: sanitizeInput(upazila),
+      union: sanitizeInput(union),
       address: address ? sanitizeInput(address) : null,
+      avatar: avatar || null,
       role: "donor",
       status: "active",
       isDonor: true
@@ -73,6 +92,11 @@ exports.register = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         bloodGroup: newUser.bloodGroup,
+        division: newUser.division,
+        district: newUser.district,
+        upazila: newUser.upazila,
+        union: newUser.union,
+        avatar: newUser.avatar,
         role: newUser.role
       },
       tokens: {
@@ -139,6 +163,11 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         bloodGroup: user.bloodGroup,
+        division: user.division,
+        district: user.district,
+        upazila: user.upazila,
+        union: user.union,
+        avatar: user.avatar,
         role: user.role,
         status: user.status
       },
@@ -205,6 +234,10 @@ exports.verify = async (req, res) => {
         name: user.name,
         email: user.email,
         bloodGroup: user.bloodGroup,
+        division: user.division,
+        district: user.district,
+        upazila: user.upazila,
+        union: user.union,
         role: user.role,
         status: user.status,
         avatar: user.avatar

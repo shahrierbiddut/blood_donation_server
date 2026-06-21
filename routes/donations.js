@@ -4,6 +4,7 @@ const {
   createRequest,
   getAllRequests,
   getSingleRequest,
+  acceptRequest,
   updateRequest,
   deleteRequest,
   getMyRequests,
@@ -18,6 +19,8 @@ router.get("/", getAllRequests);
 router.post("/", protect, checkStatus, createRequest);
 router.get("/user/my", protect, checkStatus, getMyRequests);
 router.get("/user/stats", protect, checkStatus, getStats);
+router.post("/:id/donate", protect, checkStatus, acceptRequest);
+router.put("/:id/donate", protect, checkStatus, acceptRequest);
 
 // Wildcard — must be last
 router.get("/:id", getSingleRequest);

@@ -91,13 +91,20 @@ exports.register = async (req, res) => {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        phone: newUser.phone,
         bloodGroup: newUser.bloodGroup,
         division: newUser.division,
         district: newUser.district,
         upazila: newUser.upazila,
         union: newUser.union,
+        address: newUser.address,
         avatar: newUser.avatar,
-        role: newUser.role
+        role: newUser.role,
+        status: newUser.status,
+        isDonor: newUser.isDonor,
+        totalDonations: newUser.totalDonations,
+        lastDonationDate: newUser.lastDonationDate,
+        createdAt: newUser.createdAt
       },
       tokens: {
         accessToken,
@@ -162,14 +169,20 @@ exports.login = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         bloodGroup: user.bloodGroup,
         division: user.division,
         district: user.district,
         upazila: user.upazila,
         union: user.union,
+        address: user.address,
         avatar: user.avatar,
         role: user.role,
-        status: user.status
+        status: user.status,
+        isDonor: user.isDonor,
+        totalDonations: user.totalDonations,
+        lastDonationDate: user.lastDonationDate,
+        createdAt: user.createdAt
       },
       tokens: {
         accessToken,
@@ -233,14 +246,20 @@ exports.verify = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         bloodGroup: user.bloodGroup,
         division: user.division,
         district: user.district,
         upazila: user.upazila,
         union: user.union,
+        address: user.address,
         role: user.role,
         status: user.status,
-        avatar: user.avatar
+        avatar: user.avatar,
+        isDonor: user.isDonor,
+        totalDonations: user.totalDonations,
+        lastDonationDate: user.lastDonationDate,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {

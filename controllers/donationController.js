@@ -41,7 +41,7 @@ exports.getAllRequests = async (req, res) => {
   try {
     const { bloodGroup, district, upazila, page = 1, limit = 10 } = req.query;
 
-    const filter = { status: { $ne: "cancelled" } };
+    const filter = { $or: [{ status: "pending" }, { status: "inprogress" }, { status: "done" }] };
     if (bloodGroup && bloodGroup !== "All") filter.bloodGroup = bloodGroup;
     if (district && district !== "All") filter.district = { $regex: district, $options: "i" };
     if (upazila && upazila !== "All") filter.upazila = { $regex: upazila, $options: "i" };
@@ -51,7 +51,6 @@ exports.getAllRequests = async (req, res) => {
     const [requests, total] = await Promise.all([
       DonationRequest.find(filter)
         .populate("requester", "name avatar bloodGroup district upazila")
-        .populate("donor", "name avatar email")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -94,6 +93,42 @@ exports.getSingleRequest = async (req, res) => {
 };
 
 /**
+ * POST /api/donations/:id/donate
+ * Accept a pending donation request as the current donor
+ */
+exports.acceptRequest = async (req, res) => {
+  try {
+    const request = await DonationRequest.findById(req.params.id);
+    if (!request) return sendError(res, 404, "Donation request not found");
+
+    if (request.requester.toString() === req.user.userId) {
+      return sendError(res, 400, "You cannot donate to your own request");
+    }
+
+    if (request.status !== "pending") {
+      return sendError(res, 400, "This request has already been accepted");
+    }
+
+    request.status = "inprogress";
+    request.donor = req.user.userId;
+    await request.save();
+
+    const populatedRequest = await DonationRequest.findById(request._id)
+      .populate("requester", "name avatar bloodGroup district upazila email")
+      .populate("donor", "name avatar email");
+
+    res.status(200).json({
+      success: true,
+      message: "Donation request accepted",
+      data: populatedRequest
+    });
+  } catch (error) {
+    console.error("Accept request error:", error);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+/**
  * PUT /api/donations/:id
  * Update a donation request (requester or admin)
  */
@@ -105,11 +140,29 @@ exports.updateRequest = async (req, res) => {
     const isOwner = request.requester.toString() === req.user.userId;
     const isAdmin = req.user.userRole === "admin";
 
-    if (!isOwner && !isAdmin) {
+    const isDonorAccept =
+      req.body.status === "inprogress" &&
+      request.status === "pending" &&
+      !request.donor &&
+      request.requester.toString() !== req.user.userId;
+
+    if (!isOwner && !isAdmin && !isDonorAccept) {
       return sendError(res, 403, "Not authorized to update this request");
     }
 
     const allowed = ["recipientName", "district", "upazila", "hospitalName", "bloodGroup", "donationDate", "donationTime", "requestMessage", "status", "donor"];
+
+    if (isDonorAccept) {
+      request.status = "inprogress";
+      request.donor = req.user.userId;
+      await request.save();
+
+      const populatedRequest = await DonationRequest.findById(request._id)
+        .populate("requester", "name avatar bloodGroup district upazila email")
+        .populate("donor", "name avatar email");
+
+      return res.status(200).json({ success: true, message: "Donation request accepted", data: populatedRequest });
+    }
 
     allowed.forEach((field) => {
       if (req.body[field] !== undefined) {

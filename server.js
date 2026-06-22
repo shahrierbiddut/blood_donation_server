@@ -75,6 +75,61 @@ app.get("/health", (req, res) => {
   });
 });
 
+// ==================== Initialize Admin User ====================
+app.get("/api/init-admin", async (req, res) => {
+  try {
+    const User = require("./models/User");
+    const bcrypt = require("bcryptjs");
+
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ email: "admin123@gmail.com" });
+    if (existingAdmin) {
+      return res.status(200).json({
+        success: true,
+        message: "⚠️ Admin user already exists!",
+        email: "admin123@gmail.com"
+      });
+    }
+
+    // Create admin user
+    const adminUser = new User({
+      name: "Admin Rahim",
+      email: "admin123@gmail.com",
+      password: "Admin@12345", // Strong password: uppercase, lowercase, number, special char
+      phone: "01700000000",
+      bloodGroup: "O+",
+      division: "Dhaka",
+      district: "Dhaka",
+      upazila: "Dhanmondi",
+      union: "Banani",
+      address: "Admin Office, Dhaka",
+      role: "admin",
+      status: "active",
+      isAdmin: true,
+      isDonor: false,
+      emailVerified: true
+    });
+
+    await adminUser.save();
+    res.status(201).json({
+      success: true,
+      message: "✅ Admin user created successfully!",
+      user: {
+        email: "admin123@gmail.com",
+        password: "Admin@12345",
+        role: "admin"
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error initializing admin:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Error creating admin user",
+      error: error.message
+    });
+  }
+});
+
 // ==================== 404 Not Found Middleware ====================
 app.use((req, res) => {
   res.status(404).json({ 
@@ -101,10 +156,50 @@ app.use((err, req, res, next) => {
 // ==================== Server Startup ====================
 const PORT = process.env.PORT || 5000;
 
+// Initialize admin user on startup
+const initializeAdmin = async () => {
+  try {
+    const User = require("./models/User");
+    
+    const existingAdmin = await User.findOne({ email: "admin123@gmail.com" });
+    if (!existingAdmin) {
+      const adminUser = new User({
+        name: "Admin Rahim",
+        email: "admin123@gmail.com",
+        password: "Admin@12345",
+        phone: "01700000000",
+        bloodGroup: "O+",
+        division: "Dhaka",
+        district: "Dhaka",
+        upazila: "Dhanmondi",
+        union: "Banani",
+        address: "Admin Office, Dhaka",
+        role: "admin",
+        status: "active",
+        isAdmin: true,
+        isDonor: false,
+        emailVerified: true
+      });
+      
+      await adminUser.save();
+      console.log("✅ Admin user initialized!");
+      console.log("📧 Email: admin123@gmail.com");
+      console.log("🔐 Password: Admin@12345");
+    } else {
+      console.log("ℹ️  Admin user already exists");
+    }
+  } catch (error) {
+    console.error("⚠️  Error initializing admin:", error.message);
+  }
+};
+
 (async () => {
   try {
     await connectDB();
     console.log("✅ MongoDB connected successfully!");
+    
+    // Initialize admin user
+    await initializeAdmin();
     
     app.listen(PORT, () => {
       console.log(`✅ Server started on port ${PORT}`);

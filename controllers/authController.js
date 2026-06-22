@@ -4,6 +4,26 @@ const { generateTokensPair } = require("../config/jwt");
 const { sendSuccess, sendError } = require("../utils/errorResponse");
 const { validateEmail, sanitizeInput } = require("../utils/validators");
 
+const buildUserResponse = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  bloodGroup: user.bloodGroup,
+  division: user.division,
+  district: user.district,
+  upazila: user.upazila,
+  union: user.union,
+  address: user.address,
+  avatar: user.avatar,
+  role: user.role,
+  status: user.status,
+  isDonor: user.isDonor,
+  totalDonations: user.totalDonations,
+  lastDonationDate: user.lastDonationDate,
+  createdAt: user.createdAt
+});
+
 /**
  * @route   POST /api/auth/register
  * @desc    Register a new user
@@ -87,25 +107,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Registration successful",
-      user: {
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        phone: newUser.phone,
-        bloodGroup: newUser.bloodGroup,
-        division: newUser.division,
-        district: newUser.district,
-        upazila: newUser.upazila,
-        union: newUser.union,
-        address: newUser.address,
-        avatar: newUser.avatar,
-        role: newUser.role,
-        status: newUser.status,
-        isDonor: newUser.isDonor,
-        totalDonations: newUser.totalDonations,
-        lastDonationDate: newUser.lastDonationDate,
-        createdAt: newUser.createdAt
-      },
+      user: buildUserResponse(newUser),
       tokens: {
         accessToken,
         refreshToken
@@ -165,25 +167,7 @@ exports.login = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Login successful",
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        bloodGroup: user.bloodGroup,
-        division: user.division,
-        district: user.district,
-        upazila: user.upazila,
-        union: user.union,
-        address: user.address,
-        avatar: user.avatar,
-        role: user.role,
-        status: user.status,
-        isDonor: user.isDonor,
-        totalDonations: user.totalDonations,
-        lastDonationDate: user.lastDonationDate,
-        createdAt: user.createdAt
-      },
+      user: buildUserResponse(user),
       tokens: {
         accessToken,
         refreshToken
@@ -242,31 +226,59 @@ exports.verify = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Token verified",
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        bloodGroup: user.bloodGroup,
-        division: user.division,
-        district: user.district,
-        upazila: user.upazila,
-        union: user.union,
-        address: user.address,
-        role: user.role,
-        status: user.status,
-        avatar: user.avatar,
-        isDonor: user.isDonor,
-        totalDonations: user.totalDonations,
-        lastDonationDate: user.lastDonationDate,
-        createdAt: user.createdAt
-      }
+      user: buildUserResponse(user)
     });
   } catch (error) {
     console.error("Verify error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Error verifying token"
+    });
+  }
+};
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update current user profile except email/password/role/status
+ * @access  Private
+ */
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return sendError(res, 404, "User not found");
+    }
+
+    const requiredFields = ["name", "bloodGroup", "division", "district", "upazila", "union"];
+    for (const field of requiredFields) {
+      if (req.body[field] !== undefined && !String(req.body[field]).trim()) {
+        return sendError(res, 400, `${field} is required`);
+      }
+    }
+
+    const editableFields = ["name", "phone", "bloodGroup", "division", "district", "upazila", "union", "address", "avatar"];
+    editableFields.forEach((field) => {
+      if (req.body[field] === undefined) return;
+      if (["phone", "address", "avatar"].includes(field) && req.body[field] === "") {
+        user[field] = null;
+        return;
+      }
+      user[field] = typeof req.body[field] === "string" ? sanitizeInput(req.body[field]) : req.body[field];
+    });
+
+    user.updatedAt = new Date();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated",
+      user: buildUserResponse(user)
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error updating profile"
     });
   }
 };

@@ -7,7 +7,8 @@ const {
   logout,
   verify,
   refresh,
-  forgotPassword
+  forgotPassword,
+  updateProfile
 } = require("../controllers/authController");
 const { protect, checkStatus } = require("../middleware/auth");
 
@@ -53,6 +54,13 @@ router.post("/refresh", refresh);
  * @access  Private
  */
 router.get("/verify", protect, checkStatus, verify);
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update current user's profile
+ * @access  Private
+ */
+router.put("/profile", protect, checkStatus, updateProfile);
 
 /**
  * @route   POST /api/auth/logout

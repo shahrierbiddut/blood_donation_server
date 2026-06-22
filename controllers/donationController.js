@@ -41,7 +41,7 @@ exports.getAllRequests = async (req, res) => {
   try {
     const { bloodGroup, district, upazila, page = 1, limit = 10 } = req.query;
 
-    const filter = { $or: [{ status: "pending" }, { status: "inprogress" }, { status: "done" }] };
+    const filter = { status: "pending" };
     if (bloodGroup && bloodGroup !== "All") filter.bloodGroup = bloodGroup;
     if (district && district !== "All") filter.district = { $regex: district, $options: "i" };
     if (upazila && upazila !== "All") filter.upazila = { $regex: upazila, $options: "i" };

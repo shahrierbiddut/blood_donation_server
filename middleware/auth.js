@@ -19,7 +19,8 @@ const protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Not authorized to access this route"
+        message: "Not authorized to access this route",
+        data: null
       });
     }
 
@@ -31,14 +32,16 @@ const protect = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: error.message || "Invalid token"
+        message: error.message || "Invalid token",
+        data: null
       });
     }
   } catch (error) {
     console.error("Auth middleware error:", error);
     res.status(500).json({
       success: false,
-      message: "Authentication error"
+      message: "Authentication error",
+      data: null
     });
   }
 };
@@ -51,14 +54,16 @@ const authorize = (...roles) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: "Not authenticated"
+        message: "Not authenticated",
+        data: null
       });
     }
 
     if (!roles.includes(req.user.userRole)) {
       return res.status(403).json({
         success: false,
-        message: `User role '${req.user.userRole}' is not authorized to access this route`
+        message: `User role '${req.user.userRole}' is not authorized to access this route`,
+        data: null
       });
     }
 
@@ -80,14 +85,16 @@ const checkStatus = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
+        data: null
       });
     }
 
     if (user.status === "blocked") {
       return res.status(403).json({
         success: false,
-        message: "Your account has been blocked. Please contact administrator."
+        message: "Your account has been blocked. Please contact administrator.",
+        data: null
       });
     }
 
@@ -96,7 +103,8 @@ const checkStatus = async (req, res, next) => {
     console.error("Status check error:", error);
     res.status(500).json({
       success: false,
-      message: "Error checking user status"
+      message: "Error checking user status",
+      data: null
     });
   }
 };

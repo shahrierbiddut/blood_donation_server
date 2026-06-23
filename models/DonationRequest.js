@@ -60,6 +60,12 @@ const DonationRequestSchema = new mongoose.Schema(
       },
       default: "pending"
     },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: [300, "Cancellation reason cannot exceed 300 characters"],
+      default: ""
+    },
     donor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

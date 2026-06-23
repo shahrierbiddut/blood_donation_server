@@ -1,6 +1,8 @@
 // server.js
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const connectDB = require("./config/db");
 
@@ -18,8 +20,23 @@ const corsOptions = {
 
 // ==================== Middleware ====================
 app.use(cors(corsOptions));
+app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+const apiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests, please try again later.",
+    data: null
+  }
+});
+
+app.use("/api", apiRateLimiter);
 
 // Security headers middleware
 app.use((req, res, next) => {
@@ -44,8 +61,8 @@ app.use("/api/location", require("./routes/location"));
 // Donation request routes ✅
 app.use("/api/donations", require("./routes/donations"));
 
-// User routes (will be created in Phase 2)
-// app.use("/api/users", require("./routes/users"));
+// User routes ✅
+app.use("/api/users", require("./routes/users"));
 
 // Donation routes (will be created in Phase 5)
 // app.use("/api/donations", require("./routes/donations"));
@@ -56,8 +73,8 @@ app.use("/api/donations", require("./routes/donations"));
 // Funding routes (will be created in Phase 8)
 // app.use("/api/funding", require("./routes/funding"));
 
-// Admin routes (will be created in Phase 7)
-// app.use("/api/admin", require("./routes/admin"));
+// Admin routes ✅
+app.use("/api/admin", require("./routes/admin"));
 
 // ==================== Health Check Routes ====================
 app.get("/", (req, res) => {
@@ -135,7 +152,9 @@ app.use((req, res) => {
   res.status(404).json({ 
     success: false,
     message: "Route not found",
-    path: req.path
+    data: {
+      path: req.path
+    }
   });
 });
 
@@ -149,6 +168,7 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({
     success: false,
     message: message,
+    data: null,
     ...(process.env.NODE_ENV === "development" && { stack: err.stack })
   });
 });

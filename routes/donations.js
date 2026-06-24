@@ -8,6 +8,7 @@ const {
   updateRequest,
   deleteRequest,
   getMyRequests,
+  getMyInProgressDonations,
   getStats,
   volunteerUpdateRequestStatus
 } = require("../controllers/donationController");
@@ -23,6 +24,7 @@ router.get("/", getAllRequests);
 router.post("/", protect, checkStatus, createRequest);
 router.get("/admin/all", protect, checkStatus, authorize("admin"), getAllRequestsAdmin);
 router.get("/user/my", protect, checkStatus, getMyRequests);
+router.get("/user/in-progress", protect, checkStatus, getMyInProgressDonations);
 router.get("/user/stats", protect, checkStatus, getStats);
 router.post("/:id/donate", protect, checkStatus, acceptRequest);
 router.put("/:id/donate", protect, checkStatus, acceptRequest);

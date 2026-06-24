@@ -457,6 +457,26 @@ exports.getMyRequests = async (req, res) => {
 };
 
 /**
+ * GET /api/donations/user/in-progress
+ * Get requests accepted by the current user as donor
+ */
+exports.getMyInProgressDonations = async (req, res) => {
+  try {
+    const requests = await DonationRequest.find({
+      donor: req.user.userId,
+      status: "inprogress"
+    })
+      .populate("requester", "name avatar email phone bloodGroup district upazila")
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    console.error("Get my in-progress donations error:", error);
+    res.status(500).json({ success: false, message: error.message || "Server error" });
+  }
+};
+
+/**
  * GET /api/donations/stats
  * Dashboard stats for current user
  */
@@ -466,7 +486,7 @@ exports.getStats = async (req, res) => {
 
     const [total, inprogress, done, cancelled] = await Promise.all([
       DonationRequest.countDocuments({ requester: userId }),
-      DonationRequest.countDocuments({ requester: userId, status: "inprogress" }),
+      DonationRequest.countDocuments({ donor: userId, status: "inprogress" }),
       DonationRequest.countDocuments({ requester: userId, status: "done" }),
       DonationRequest.countDocuments({ requester: userId, status: "cancelled" })
     ]);

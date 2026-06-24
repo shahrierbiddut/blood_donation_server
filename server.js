@@ -9,13 +9,22 @@ const connectDB = require("./config/db");
 const app = express();
 
 // ==================== CORS Configuration ====================
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim());
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 200,
-  maxAge: 86400 // 24 hours
+  maxAge: 86400
 };
 
 // ==================== Middleware ====================
@@ -60,6 +69,8 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/location", require("./routes/location"));
 // Donation request routes ✅
 app.use("/api/donations", require("./routes/donations"));
+// Contact routes ✅
+app.use("/api/contacts", require("./routes/contact"));
 
 // User routes ✅
 app.use("/api/users", require("./routes/users"));

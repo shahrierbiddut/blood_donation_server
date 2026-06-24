@@ -11,6 +11,8 @@ const {
   updateProfile
 } = require("../controllers/authController");
 const { protect, checkStatus } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
+const { userProfileUpdateSchema } = require("../validations/userSchemas");
 
 /**
  * Public Routes
@@ -60,7 +62,7 @@ router.get("/verify", protect, checkStatus, verify);
  * @desc    Update current user's profile
  * @access  Private
  */
-router.put("/profile", protect, checkStatus, updateProfile);
+router.put("/profile", protect, checkStatus, validate(userProfileUpdateSchema), updateProfile);
 
 /**
  * @route   POST /api/auth/logout

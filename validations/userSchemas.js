@@ -47,7 +47,7 @@ const userProfileUpdateSchema = z
     upazila: z.string().trim().min(1).max(100).optional(),
     union: z.string().trim().min(1).max(100).optional(),
     address: z.string().trim().max(200).nullable().optional(),
-    avatar: z.string().trim().max(500).nullable().optional(),
+    avatar: z.string().trim().max(5_000_000).nullable().optional(),
     emergencyContact: z.string().trim().max(20).nullable().optional(),
     medicalHistory: z.string().trim().max(500).nullable().optional()
   })

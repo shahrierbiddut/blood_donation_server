@@ -249,30 +249,39 @@ exports.updateProfile = async (req, res) => {
       return sendError(res, 404, "User not found");
     }
 
-    const requiredFields = ["name", "bloodGroup", "division", "district", "upazila", "union"];
-    for (const field of requiredFields) {
-      if (req.body[field] !== undefined && !String(req.body[field]).trim()) {
-        return sendError(res, 400, `${field} is required`);
-      }
-    }
-
-    const editableFields = ["name", "phone", "bloodGroup", "division", "district", "upazila", "union", "address", "avatar"];
+    // Fields that can be updated
+    const editableFields = ["name", "phone", "bloodGroup", "division", "district", "upazila", "union", "address", "avatar", "emergencyContact", "medicalHistory"];
+    
+    // Update only provided fields
     editableFields.forEach((field) => {
       if (req.body[field] === undefined) return;
-      if (["phone", "address", "avatar"].includes(field) && req.body[field] === "") {
-        user[field] = null;
-        return;
+      
+      // Handle nullable fields - empty string means set to null
+      if (["phone", "address", "avatar", "emergencyContact", "medicalHistory"].includes(field)) {
+        if (req.body[field] === "") {
+          user[field] = null;
+        } else {
+          user[field] = req.body[field];
+        }
+      } else {
+        // Required fields - apply sanitization
+        user[field] = req.body[field];
       }
-      user[field] = typeof req.body[field] === "string" ? sanitizeInput(req.body[field]) : req.body[field];
     });
 
+    // Update timestamp
     user.updatedAt = new Date();
+    
+    // Save with explicit error handling
     await user.save();
+
+    // Fetch fresh user data after save to ensure consistency
+    const updatedUser = await User.findById(user._id);
 
     res.status(200).json({
       success: true,
-      message: "Profile updated",
-      user: buildUserResponse(user)
+      message: "Profile updated successfully",
+      user: buildUserResponse(updatedUser)
     });
   } catch (error) {
     console.error("Update profile error:", error);

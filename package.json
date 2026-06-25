@@ -7,8 +7,8 @@
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node init && node server.js",
+    "dev": "node init && node server.js",
     "seed": "node scripts/seedData.js",
     "seed-admin": "node scripts/seedAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1"

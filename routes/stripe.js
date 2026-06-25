@@ -17,11 +17,14 @@ router.post("/create-session", protect, checkStatus, async (req, res) => {
   }
 
   try {
-    const { amountCents, name, successUrl, cancelUrl } = req.body;
+    const { amountCents, name, successUrl, cancelUrl, campaign, message, anonymous } = req.body;
 
     if (!amountCents || amountCents < 100) {
       return res.status(400).json({ success: false, message: "Minimum amount is $1.00" });
     }
+
+    const donorName = anonymous ? "Anonymous" : name || "Anonymous";
+    const campaignName = campaign || "Emergency Blood Support";
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -29,7 +32,7 @@ router.post("/create-session", protect, checkStatus, async (req, res) => {
         {
           price_data: {
             currency: "usd",
-            product_data: { name: "BloodBridge Donation" },
+            product_data: { name: `BloodBridge Donation - ${campaignName}` },
             unit_amount: amountCents,
           },
           quantity: 1,
@@ -39,7 +42,10 @@ router.post("/create-session", protect, checkStatus, async (req, res) => {
       customer_email: req.user?.email,
       metadata: {
         userId: req.user?.userId,
-        donorName: name || "Anonymous",
+        donorName,
+        campaign: campaignName,
+        message: message || "",
+        anonymous: anonymous ? "true" : "false",
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -70,6 +76,9 @@ const webhookHandler = async (req, res) => {
           name: session.metadata?.donorName || session.customer_details?.name || "Anonymous",
           amount: session.amount_total,
           currency: session.currency,
+          campaign: session.metadata?.campaign || "Emergency Blood Support",
+          message: session.metadata?.message || "",
+          anonymous: session.metadata?.anonymous === "true",
           paymentMethod: session.payment_method_types?.[0] || "card",
           status: session.payment_status === "paid" ? "Completed" : "Pending",
           transactionId: session.payment_intent,

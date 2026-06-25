@@ -5,7 +5,7 @@ const getFundingHistory = async (req, res) => {
   try {
     const fundings = await Funding.find()
       .sort({ createdAt: -1 })
-      .select("name amount currency paymentMethod status transactionId createdAt")
+      .select("name amount currency campaign message anonymous paymentMethod status transactionId createdAt")
       .lean();
 
     return res.status(200).json({

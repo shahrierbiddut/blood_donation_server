@@ -19,6 +19,18 @@ const contactMessageSchema = new mongoose.Schema(
         "Please provide a valid email address"
       ]
     },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, "Phone number cannot exceed 20 characters"],
+      default: null
+    },
+    address: {
+      type: String,
+      trim: true,
+      maxlength: [200, "Address cannot exceed 200 characters"],
+      default: null
+    },
     subject: {
       type: String,
       required: [true, "Subject is required"],

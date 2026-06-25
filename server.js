@@ -30,7 +30,14 @@ const corsOptions = {
 // ==================== Middleware ====================
 app.use(cors(corsOptions));
 app.use(helmet());
-app.use(express.json({ limit: "10mb" }));
+
+// Keep Stripe webhook raw so the signature can be verified correctly.
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/stripe/webhook") {
+    return next();
+  }
+  express.json({ limit: "10mb" })(req, res, next);
+});
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 const apiRateLimiter = rateLimit({
@@ -72,17 +79,21 @@ app.use("/api/donations", require("./routes/donations"));
 // Contact routes ✅
 app.use("/api/contacts", require("./routes/contact"));
 
+const stripeRoutes = require("./routes/stripe");
+const fundingRoutes = require("./routes/funding");
+
 // User routes ✅
 app.use("/api/users", require("./routes/users"));
 
-// Donation routes (will be created in Phase 5)
-// app.use("/api/donations", require("./routes/donations"));
+// Stripe webhook route must remain raw for signature verification
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeRoutes.webhookHandler
+);
 
-// Search routes (will be created in Phase 9)
-// app.use("/api/search", require("./routes/search"));
-
-// Funding routes (will be created in Phase 8)
-// app.use("/api/funding", require("./routes/funding"));
+app.use("/api/stripe", stripeRoutes.router);
+app.use("/api/fundings", fundingRoutes);
 
 // Admin routes ✅
 app.use("/api/admin", require("./routes/admin"));

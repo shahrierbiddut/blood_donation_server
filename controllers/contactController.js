@@ -8,12 +8,14 @@ const { sanitizeInput } = require("../utils/validators");
  */
 const createContact = async (req, res) => {
   try {
-    const { name, email, subject, message } = req.body;
+    const { name, email, phone, address, subject, message } = req.body;
 
     // Sanitize inputs
     const sanitizedData = {
       name: sanitizeInput(name),
       email: sanitizeInput(email).toLowerCase(),
+      phone: phone ? sanitizeInput(phone) : null,
+      address: address ? sanitizeInput(address) : null,
       subject: sanitizeInput(subject),
       message: sanitizeInput(message)
     };
@@ -22,21 +24,20 @@ const createContact = async (req, res) => {
     const contactMessage = new ContactMessage(sanitizedData);
     await contactMessage.save();
 
-    return sendSuccess(res, {
-      statusCode: 201,
-      message: "Thank you for contacting us! We will get back to you soon.",
-      data: {
+    return sendSuccess(
+      res,
+      201,
+      "Thank you for contacting us! We will get back to you soon.",
+      {
         id: contactMessage._id,
         email: contactMessage.email,
+        phone: contactMessage.phone,
         subject: contactMessage.subject
       }
-    });
+    );
   } catch (error) {
     console.error("Contact creation error:", error);
-    return sendError(res, {
-      statusCode: 500,
-      message: error.message || "Failed to submit contact message"
-    });
+    return sendError(res, 500, error.message || "Failed to submit contact message");
   }
 };
 
@@ -76,10 +77,8 @@ const getAllContacts = async (req, res) => {
 
     const totalPages = Math.ceil(total / limit);
 
-    return sendSuccess(res, {
-      statusCode: 200,
-      message: "Contact messages retrieved successfully",
-      data: contacts,
+    return sendSuccess(res, 200, "Contact messages retrieved successfully", {
+      contacts,
       pagination: {
         total,
         page: Number(page),
@@ -89,10 +88,7 @@ const getAllContacts = async (req, res) => {
     });
   } catch (error) {
     console.error("Get contacts error:", error);
-    return sendError(res, {
-      statusCode: 500,
-      message: error.message || "Failed to retrieve contact messages"
-    });
+    return sendError(res, 500, error.message || "Failed to retrieve contact messages");
   }
 };
 
@@ -110,23 +106,13 @@ const getContactById = async (req, res) => {
     );
 
     if (!contact) {
-      return sendError(res, {
-        statusCode: 404,
-        message: "Contact message not found"
-      });
+      return sendError(res, 404, "Contact message not found");
     }
 
-    return sendSuccess(res, {
-      statusCode: 200,
-      message: "Contact message retrieved successfully",
-      data: contact
-    });
+    return sendSuccess(res, 200, "Contact message retrieved successfully", contact);
   } catch (error) {
     console.error("Get contact error:", error);
-    return sendError(res, {
-      statusCode: 500,
-      message: error.message || "Failed to retrieve contact message"
-    });
+    return sendError(res, 500, error.message || "Failed to retrieve contact message");
   }
 };
 
@@ -144,10 +130,7 @@ const updateContactStatus = async (req, res) => {
     const contact = await ContactMessage.findById(id);
 
     if (!contact) {
-      return sendError(res, {
-        statusCode: 404,
-        message: "Contact message not found"
-      });
+      return sendError(res, 404, "Contact message not found");
     }
 
     // Update status
@@ -162,21 +145,14 @@ const updateContactStatus = async (req, res) => {
 
     await contact.save();
 
-    return sendSuccess(res, {
-      statusCode: 200,
-      message: "Contact message updated successfully",
-      data: {
+    return sendSuccess(res, 200, "Contact message updated successfully", {
         id: contact._id,
         status: contact.status,
         repliedAt: contact.repliedAt
-      }
     });
   } catch (error) {
     console.error("Update contact error:", error);
-    return sendError(res, {
-      statusCode: 500,
-      message: error.message || "Failed to update contact message"
-    });
+    return sendError(res, 500, error.message || "Failed to update contact message");
   }
 };
 
@@ -191,25 +167,15 @@ const deleteContact = async (req, res) => {
     const contact = await ContactMessage.findByIdAndDelete(id);
 
     if (!contact) {
-      return sendError(res, {
-        statusCode: 404,
-        message: "Contact message not found"
-      });
+      return sendError(res, 404, "Contact message not found");
     }
 
-    return sendSuccess(res, {
-      statusCode: 200,
-      message: "Contact message deleted successfully",
-      data: {
-        id: contact._id
-      }
+    return sendSuccess(res, 200, "Contact message deleted successfully", {
+      id: contact._id
     });
   } catch (error) {
     console.error("Delete contact error:", error);
-    return sendError(res, {
-      statusCode: 500,
-      message: error.message || "Failed to delete contact message"
-    });
+    return sendError(res, 500, error.message || "Failed to delete contact message");
   }
 };
 
